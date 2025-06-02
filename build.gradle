@@ -9,9 +9,13 @@ version = '0.0.1-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        def currentVersion = JavaVersion.current().majorVersion.toInteger()
+        if (currentVersion < 17) {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
     }
 }
+
 
 repositories {
     mavenCentral()
@@ -30,6 +34,8 @@ dependencies {
 
     // Jackson JSON support
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
 
     compileOnly 'org.projectlombok:lombok:1.18.32'
     annotationProcessor 'org.projectlombok:lombok:1.18.32'

@@ -1,5 +1,5 @@
 -- approval notification
-INSERT INTO `MultilingualTags` (tag, language, content)
+INSERT INTO `Multilingual_tags` (tag, language, content)
 VALUES ('notice.approve.title', 'ENGLISH', 'Approval Notification'),
        ('notice.approve.title', 'CHINESE_MANDARIN', '申请通过通知'),
        ('notice.approve.title', 'JOSEONJOK_MAL', '승인 알림'),
@@ -12,7 +12,7 @@ VALUES ('notice.approve.title', 'ENGLISH', 'Approval Notification'),
         'Votre demande d’inscription en tant que prestataire a été approuvée. Bienvenue parmi nous!');
 
 -- rejection notification
-INSERT INTO `MultilingualTags` (tag, language, content)
+INSERT INTO `Multilingual_tags` (tag, language, content)
 VALUES ('notice.reject.title', 'ENGLISH', 'Application Rejected'),
        ('notice.reject.title', 'CHINESE_MANDARIN', '申请未通过通知'),
        ('notice.reject.title', 'JOSEONJOK_MAL', '신청 거절 알림'),
