@@ -15,8 +15,8 @@ USE MAISON_DB;
 CREATE TABLE `Cities`
 (
     zipcode   INT PRIMARY KEY,
-    place     VARCHAR(255),
-    province  VARCHAR(255),
+    place     VARCHAR(127),
+    province  VARCHAR(127),
     latitude  INT NOT NULL, -- stored as ×10000, invisible to backend
     longitude INT NOT NULL, -- stored as ×10000, invisible to backend
     UNIQUE KEY place_province (place, province)
