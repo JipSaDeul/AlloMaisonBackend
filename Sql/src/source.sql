@@ -20,7 +20,8 @@ CREATE TABLE `Cities`
     latitude  INT NOT NULL, -- stored as ×10000, invisible to backend
     longitude INT NOT NULL, -- stored as ×10000, invisible to backend
     UNIQUE KEY place_province (place, province)
-);
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
 
 -- ==== Users == Table Creation ====
 
@@ -38,7 +39,8 @@ CREATE TABLE `Users`
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- account creation time
     login_time      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     last_login_time TIMESTAMP           NULL             -- last login time
-);
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
 
 -- ==== Categories == Table Creation ====
 
@@ -46,7 +48,9 @@ CREATE TABLE `Categories`
 (
     cat_id INT AUTO_INCREMENT PRIMARY KEY, -- cat_id auto-incremented, always > 0
     name   VARCHAR(64) UNIQUE NOT NULL     -- Category name, must be unique
-) AUTO_INCREMENT = 1;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  AUTO_INCREMENT = 1;
 
 -- ==== Provider-related Tables == Table Creation ====
 
@@ -55,7 +59,9 @@ CREATE TABLE `Provider_certificates`
 (
     certificate_id BIGINT AUTO_INCREMENT PRIMARY KEY, -- certificate_id auto-incremented, always > 0
     file_url       VARCHAR(255)                       -- _url to the certificate file
-) AUTO_INCREMENT = 1;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  AUTO_INCREMENT = 1;
 
 
 -- Provider_applications table
@@ -70,7 +76,9 @@ CREATE TABLE `Provider_applications`
     FOREIGN KEY (user_id) REFERENCES `Users` (user_id),
     FOREIGN KEY (cat_id) REFERENCES `Categories` (cat_id),
     FOREIGN KEY (city_zipcode) REFERENCES Cities (zipcode)
-) AUTO_INCREMENT = 1;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  AUTO_INCREMENT = 1;
 
 -- Provider_certificates associated with Provider_applications
 CREATE TABLE `Provide_application_certificates`
@@ -80,14 +88,17 @@ CREATE TABLE `Provide_application_certificates`
     PRIMARY KEY (application_id, certificate_id),
     FOREIGN KEY (application_id) REFERENCES `Provider_applications` (application_id),
     FOREIGN KEY (certificate_id) REFERENCES `Provider_certificates` (certificate_id)
-);
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
 
 -- Provider_labels table
 CREATE TABLE `Provider_labels`
 (
     label_id BIGINT AUTO_INCREMENT PRIMARY KEY, -- label_id auto-incremented, always > 0
     name     VARCHAR(64) UNIQUE NOT NULL        -- Label name, must be unique
-) AUTO_INCREMENT = 1;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  AUTO_INCREMENT = 1;
 
 -- Provider_infos: table to check if user is a provider
 CREATE TABLE `Provider_infos`
@@ -103,7 +114,9 @@ CREATE TABLE `Provider_infos`
     FOREIGN KEY (provider_id) REFERENCES `Users` (user_id),
     FOREIGN KEY (cat_id) REFERENCES `Categories` (cat_id),
     FOREIGN KEY (city_zipcode) REFERENCES Cities (zipcode)
-) AUTO_INCREMENT = 1;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  AUTO_INCREMENT = 1;
 
 -- Provider_labels associated with Provider_infos
 CREATE TABLE `Provider_info_labels`
@@ -113,7 +126,8 @@ CREATE TABLE `Provider_info_labels`
     PRIMARY KEY (provider_id, label_id),
     FOREIGN KEY (provider_id) REFERENCES `Provider_infos` (provider_id),
     FOREIGN KEY (label_id) REFERENCES `Provider_labels` (label_id)
-);
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
 
 
 -- ==== Task and Order Tables == Table Creation ====
@@ -138,7 +152,8 @@ CREATE TABLE `Tasks`
     FOREIGN KEY (customer_id) REFERENCES `Users` (user_id),
     FOREIGN KEY (cat_id) REFERENCES `Categories` (cat_id),
     FOREIGN KEY (city_zipcode) REFERENCES `Cities` (zipcode)
-);
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
 
 -- Order table
 CREATE TABLE `Orders`
@@ -148,7 +163,8 @@ CREATE TABLE `Orders`
     confirmed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Order confirmation time
     FOREIGN KEY (order_id) REFERENCES `Tasks` (task_id),
     FOREIGN KEY (provider_id) REFERENCES `Provider_infos` (provider_id)
-);
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
 
 -- Review table
 CREATE TABLE `Reviews`
@@ -157,7 +173,8 @@ CREATE TABLE `Reviews`
     ranking     INT,
     review_text TEXT,
     FOREIGN KEY (order_id) REFERENCES `Orders` (order_id)
-);
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
 
 -- ==== Chat Tables == Table Creation ====
 
@@ -169,7 +186,9 @@ CREATE TABLE `Conversations`
     user2_id BIGINT,
     FOREIGN KEY (user1_id) REFERENCES `Users` (user_id),
     FOREIGN KEY (user2_id) REFERENCES `Users` (user_id)
-) AUTO_INCREMENT = 1;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  AUTO_INCREMENT = 1;
 
 CREATE TABLE `Chat_messages`
 (
@@ -179,7 +198,9 @@ CREATE TABLE `Chat_messages`
     content       TEXT    NOT NULL,                    -- Message content
     sent_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Message sent time
     FOREIGN KEY (chat_id) REFERENCES `Conversations` (chat_id)
-) AUTO_INCREMENT = 1;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  AUTO_INCREMENT = 1;
 
 CREATE TABLE `Notice_messages`
 (
@@ -190,7 +211,9 @@ CREATE TABLE `Notice_messages`
     type      ENUM ('NOTICE', 'SYSTEM', 'WARNING')  DEFAULT 'NOTICE', -- Notice type
     sent_time TIMESTAMP                             DEFAULT CURRENT_TIMESTAMP,
     targets   ENUM ('ALL', 'PROVIDERS', 'PERSONAL') DEFAULT 'ALL'     -- Target audience
-) AUTO_INCREMENT = 1;
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  AUTO_INCREMENT = 1;
 
 -- ==== Multilingual Support Tables == Table Creation ====
 
@@ -201,7 +224,16 @@ CREATE TABLE `Multilingual_tags`
     language ENUM ('ENGLISH', 'CHINESE_MANDARIN', 'JOSEONJOK_MAL', 'FRENCH') NOT NULL,
     content  TEXT                                                            NOT NULL,
     UNIQUE (tag, language)
-);
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
+CREATE TABLE `Admins`
+(
+    admin_id      BIGINT PRIMARY KEY,           -- generated by backend (uu_id to long)
+    admin_name    VARCHAR(255) UNIQUE NOT NULL, -- must be unique
+    password_hash VARCHAR(255)        NOT NULL  -- hashed password
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
 
 -- Restore foreign key checks
 SET FOREIGN_KEY_CHECKS = 1;

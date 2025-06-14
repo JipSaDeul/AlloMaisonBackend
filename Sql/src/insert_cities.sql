@@ -1,8 +1,6 @@
 -- Use MAISON_DB for the following operations
 USE MAISON_DB;
 
-SET FOREIGN_KEY_CHECKS = 0;
-TRUNCATE TABLE `Cities`;
 INSERT INTO `Cities` (zipcode, place, province, latitude, longitude)
 VALUES (75000, 'Paris', 'Paris', 488534, 23488),
        (75001, 'Paris 01', 'Paris', 488592, 23417),
@@ -6562,5 +6560,8 @@ VALUES (75000, 'Paris', 'Paris', 488534, 23488),
        (20290, 'Crocicchia', 'Haute-Corse', 424684, 93524),
        (20600, 'Furiani', 'Haute-Corse', 426584, 94145),
        (20620, 'Biguglia', 'Haute-Corse', 426269, 94202),
-       (98799, 'Clipperton Island', '', 102922, -1092072);
-SET FOREIGN_KEY_CHECKS = 1;
+       (98799, 'Clipperton Island', '', 102922, -1092072)
+ON DUPLICATE KEY UPDATE place     = VALUES(place),
+                        province  = VALUES(province),
+                        latitude  = VALUES(latitude),
+                        longitude = VALUES(longitude);
