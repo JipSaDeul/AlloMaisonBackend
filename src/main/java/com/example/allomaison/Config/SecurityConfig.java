@@ -21,15 +21,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable) // 替代 csrf().disable()
+                .csrf(AbstractHttpConfigurer::disable) // Disable CSRF protection
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()     // 放行 CORS 预检请求
-                        .requestMatchers("/api/**").permitAll()                // 放行登录/注册
-                        .anyRequest().authenticated()                               // 其余需要认证
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()     // Allow CORS preflight requests
+                        .requestMatchers("/api/**", "/admin/login").permitAll()     // Allow public login/register APIs
+                        .anyRequest().authenticated()                               // Require authentication for all other requests
                 )
-                .httpBasic(Customizer.withDefaults()); // 或 formLogin(), jwt 等，根据你的需求
+                .httpBasic(Customizer.withDefaults()); // Use basic auth (can replace with formLogin, JWT, etc.)
 
         return http.build();
     }
 }
-
