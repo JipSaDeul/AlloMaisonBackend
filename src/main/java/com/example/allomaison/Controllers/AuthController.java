@@ -4,6 +4,7 @@ import com.example.allomaison.DTOs.*;
 import com.example.allomaison.Security.JwtService;
 import com.example.allomaison.Services.ProviderService;
 import com.example.allomaison.Services.UserService;
+import com.example.allomaison.Utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,10 +27,10 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        var res = userService.login(request.getEmail(), request.getPassword())
+        return userService.login(request.getEmail(), request.getPassword())
                 .map(user -> {
                     String token = jwtService.generateToken(user);
-                    String role = providerService.isProvider(user.getUserId())? "provider" : "customer";
+                    String role = providerService.isProvider(user.getUserId()) ? "provider" : "customer";
                     LoginResponse response = LoginResponse.builder()
                             .token(token)
                             .role(role)
@@ -37,10 +38,11 @@ public class AuthController {
                             .avatarUrl(user.getAvatarUrl())
                             .userName(user.getUserName())
                             .build();
-                    return ResponseEntity.ok(response);
+                    return ResponseEntity.ok(ApiResponse.success(response));
                 })
-                .orElse(ResponseEntity.status(401).body(LoginResponse.builder().token(null).build()));
-        System.out.println(res);
-        return res;
+                .orElse(ResponseEntity.status(401)
+                        .body(ApiResponse.fail("Invalid email or password",
+                                LoginResponse.builder().token(null).build())));
     }
+
 }
