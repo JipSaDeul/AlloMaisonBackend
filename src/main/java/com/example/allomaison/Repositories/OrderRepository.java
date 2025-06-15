@@ -9,6 +9,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
+
+    boolean existsByOrderId(Long orderId);
+
     @Query("""
                 SELECT o FROM Order o
                 JOIN Task t ON o.orderId = t.taskId
