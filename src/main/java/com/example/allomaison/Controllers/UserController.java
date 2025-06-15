@@ -6,6 +6,7 @@ import com.example.allomaison.DTOs.Responses.ConversationResponse;
 import com.example.allomaison.DTOs.Responses.ErrorResponse;
 import com.example.allomaison.DTOs.TaskDTO;
 import com.example.allomaison.DTOs.Responses.SuccessResponse;
+import com.example.allomaison.Delayed.InMemoryDelayedQueueService;
 import com.example.allomaison.Entities.ProviderInfo;
 import com.example.allomaison.Entities.Task;
 import com.example.allomaison.Mapper.ProviderInfoMapper;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,7 @@ public class UserController {
     private final ReviewService reviewService;
     private final ConversationService conversationService;
     private final NoticeService noticeService;
+    private final InMemoryDelayedQueueService delayedQueueService;
 
     private Optional<UserDTO> extractUserFromToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -246,6 +249,7 @@ public class UserController {
         List<TaskDTO> tasks = taskService.getTasksByCustomerId(userId);
         return ResponseEntity.ok(tasks);
     }
+
     @GetMapping("/orders/my")
     public ResponseEntity<?> getMyOrders(@RequestHeader("Authorization") String authHeader) {
         Optional<UserDTO> userOpt = extractUserFromToken(authHeader);
@@ -275,11 +279,10 @@ public class UserController {
         return error != null ? error : response[0];
     }
 
-    @PostMapping("/order/change-status")
-    public ResponseEntity<?> changeOrderStatus(
+    @PostMapping("/task/customer-complete")
+    public ResponseEntity<?> customerCompleteTask(
             @RequestHeader("Authorization") String authHeader,
-            @RequestParam("status") String statusStr,
-            @RequestParam("orderId") Long orderId
+            @RequestParam("taskId") Long taskId
     ) {
         Optional<UserDTO> userOpt = extractUserFromToken(authHeader);
         if (userOpt.isEmpty()) {
@@ -290,28 +293,8 @@ public class UserController {
                             .build());
         }
 
-        Long userId = userOpt.get().getUserId();
-
-        Task.Status newStatus;
-        try {
-            newStatus = Task.Status.valueOf(statusStr.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_TYPE)
-                            .message("Invalid task status: " + statusStr)
-                            .build());
-        }
-
-        if (newStatus == Task.Status.PENDING) {
-            return ResponseEntity.badRequest().body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_TYPE)
-                            .message("Cannot change status to PENDING")
-                            .build());
-        }
-
-        Optional<OrderDTO> orderOpt = orderService.getOrderByTaskId(orderId);
+        Long customerId = userOpt.get().getUserId();
+        Optional<OrderDTO> orderOpt = orderService.getOrderByTaskId(taskId);
         if (orderOpt.isEmpty()) {
             return ResponseEntity.status(404).body(
                     ErrorResponse.builder()
@@ -322,31 +305,77 @@ public class UserController {
 
         OrderDTO order = orderOpt.get();
         TaskDTO task = order.task();
-        if (task == null || task.status() == null) {
-            return ResponseEntity.status(400).body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_STATE)
-                            .message("Task or task status is missing in order")
-                            .build());
-        }
-
-        Task.Status currentStatus = task.status();
-        if (currentStatus == Task.Status.COMPLETED || currentStatus == Task.Status.CANCELLED) {
-            return ResponseEntity.status(400).body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_STATE)
-                            .message("Cannot change status from COMPLETED or CANCELLED")
-                            .build());
-        }
-
-        boolean success = orderService.changeOrderStatus(orderId, userId, newStatus);
-        if (!success) {
+        if (!task.customerId().equals(customerId)) {
             return ResponseEntity.status(403).body(
                     ErrorResponse.builder()
                             .errorCode(ErrorResponse.ErrorCode.AUTH_FORBIDDEN)
-                            .message("Unauthorized to update this task status or task not found")
+                            .message("Only the customer can mark task as completed")
                             .build());
         }
+
+        if (task.status() != Task.Status.CONFIRMED) {
+            return ResponseEntity.status(400).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_STATE)
+                            .message("Task must be in CONFIRMED state to be completed")
+                            .build());
+        }
+
+        boolean success = taskService.updateTaskStatus(taskId, Task.Status.COMPLETED);
+        if (!success) {
+            return ResponseEntity.status(500).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INTERNAL_ERROR)
+                            .message("Failed to update task status")
+                            .build());
+        }
+
+        return ResponseEntity.ok(new SuccessResponse());
+    }
+
+    @PostMapping("/task/provider-request-complete")
+    public ResponseEntity<?> providerRequestComplete(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam("taskId") Long taskId
+    ) {
+        Optional<UserDTO> userOpt = extractUserFromToken(authHeader);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(401).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.AUTH_INVALID_CREDENTIALS)
+                            .message("Missing or invalid Authorization header")
+                            .build());
+        }
+
+        Long providerId = userOpt.get().getUserId();
+        Optional<OrderDTO> orderOpt = orderService.getOrderByTaskId(taskId);
+        if (orderOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_NOT_FOUND)
+                            .message("Order not found")
+                            .build());
+        }
+
+        OrderDTO order = orderOpt.get();
+        if (!order.providerId().equals(providerId)) {
+            return ResponseEntity.status(403).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.AUTH_FORBIDDEN)
+                            .message("Only the assigned provider can request task completion")
+                            .build());
+        }
+
+        TaskDTO task = order.task();
+        if (task.status() != Task.Status.CONFIRMED) {
+            return ResponseEntity.status(400).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_STATE)
+                            .message("Task must be in CONFIRMED state to request completion")
+                            .build());
+        }
+
+        delayedQueueService.enqueueCompletionRequest(task.taskId(), providerId, Duration.ofHours(24));
 
         return ResponseEntity.ok(new SuccessResponse());
     }
@@ -404,7 +433,8 @@ public class UserController {
                             .build());
         }
 
-        boolean success = orderService.changeOrderStatus(orderId, providerId, Task.Status.PENDING);
+        boolean success = orderService.cancelOrderByProvider(orderId, providerId);
+
         if (!success) {
             return ResponseEntity.status(500).body(
                     ErrorResponse.builder()
@@ -415,7 +445,62 @@ public class UserController {
 
         return ResponseEntity.ok(new SuccessResponse());
     }
-    
+
+    @PostMapping("/task/cancel")
+    public ResponseEntity<?> cancelTask(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam("taskId") Long taskId
+    ) {
+        Optional<UserDTO> userOpt = extractUserFromToken(authHeader);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(401).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.AUTH_INVALID_CREDENTIALS)
+                            .message("Missing or invalid Authorization header")
+                            .build());
+        }
+
+        Long userId = userOpt.get().getUserId();
+
+        if (orderService.checkOrdered(taskId)) {
+            return ResponseEntity.status(400).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_STATE)
+                            .message("Cannot cancel task with existing order")
+                            .build());
+        }
+
+        Optional<TaskDTO> taskOpt = taskService.getTaskById(taskId);
+        if (taskOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_NOT_FOUND)
+                            .message("Task not found")
+                            .build());
+        }
+
+        TaskDTO task = taskOpt.get();
+        if (!task.customerId().equals(userId)) {
+            return ResponseEntity.status(403).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.AUTH_FORBIDDEN)
+                            .message("Only task owner can cancel the task")
+                            .build());
+        }
+
+        boolean success = taskService.updateTaskStatus(taskId, Task.Status.CANCELLED);
+        if (!success) {
+            return ResponseEntity.status(500).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INTERNAL_ERROR)
+                            .message("Failed to cancel task")
+                            .build());
+        }
+
+        return ResponseEntity.ok(new SuccessResponse());
+    }
+
+
     @PostMapping("/review")
     public ResponseEntity<?> reviewMyOrder(
             @RequestHeader("Authorization") String authHeader,

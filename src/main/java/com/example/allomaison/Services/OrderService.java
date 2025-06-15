@@ -127,5 +127,26 @@ public class OrderService {
         return true;
     }
 
+    public boolean checkOrdered(Long taskId) {
+        return orderRepository.findById(taskId).isPresent();
+    }
+
+    public boolean cancelOrderByProvider(Long orderId, Long providerId) {
+        Optional<Order> orderOpt = orderRepository.findById(orderId);
+        if (orderOpt.isEmpty()) return false;
+
+        Order order = orderOpt.get();
+        if (!order.getProvider().getProviderId().equals(providerId)) return false;
+
+        Task task = taskRepository.findById(orderId).orElse(null);
+        if (task == null || task.getStatus() != Task.Status.CONFIRMED) return false;
+
+        task.setStatus(Task.Status.PENDING);
+        taskRepository.save(task);
+
+        orderRepository.delete(order);
+
+        return true;
+    }
 
 }
