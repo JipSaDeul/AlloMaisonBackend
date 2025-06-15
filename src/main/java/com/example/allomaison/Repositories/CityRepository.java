@@ -1,7 +1,8 @@
 package com.example.allomaison.Repositories;
 
 import com.example.allomaison.Entities.City;
-import com.example.allomaison.DTOs.CityDistanceProjection;
+import com.example.allomaison.DTOs.Projections.CityDistanceProjection;
+import lombok.NonNull;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.repository.CrudRepository;
@@ -39,5 +40,6 @@ public interface CityRepository extends CrudRepository<City, Integer> {
             @Param("maxDistance") Double maxDistance
     );
 
+    @NonNull
     List<City> findAll();
 }

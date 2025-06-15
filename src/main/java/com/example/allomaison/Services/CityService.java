@@ -2,7 +2,7 @@ package com.example.allomaison.Services;
 
 import com.example.allomaison.Repositories.CityRepository;
 import com.example.allomaison.DTOs.CityDTO;
-import com.example.allomaison.DTOs.CityDistanceProjection;
+import com.example.allomaison.DTOs.Projections.CityDistanceProjection;
 import com.example.allomaison.Mapper.CityMapper;
 import lombok.RequiredArgsConstructor;
 
@@ -19,11 +19,13 @@ public class CityService {
 
     private final CityRepository cityRepository;
 
+    @SuppressWarnings("unused")
     public Optional<CityDTO> getCityByZipcode(Integer zipcode) {
         return cityRepository.findByZipcode(zipcode)
                 .map(CityMapper::toDTO);
     }
 
+    @SuppressWarnings("unused")
     public Optional<CityDTO> getCityByPlaceAndProvince(String place, String province) {
         return cityRepository.findByPlaceAndProvince(place, province)
                 .map(CityMapper::toDTO);

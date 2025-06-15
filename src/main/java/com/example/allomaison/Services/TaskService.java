@@ -1,7 +1,7 @@
 package com.example.allomaison.Services;
 
 import com.example.allomaison.DTOs.TaskDTO;
-import com.example.allomaison.DTOs.TaskRequest;
+import com.example.allomaison.DTOs.Requests.TaskRequest;
 import com.example.allomaison.Entities.Task;
 import com.example.allomaison.Mapper.TaskMapper;
 import com.example.allomaison.Repositories.TaskRepository;
@@ -75,18 +75,24 @@ public class TaskService {
                 .toList();
     }
 
+    @SuppressWarnings("unused")
     public Optional<TaskDTO> getTaskById(Long taskId) {
         return taskRepository.findById(taskId).map(TaskMapper::toDTO);
     }
 
-    public TaskDTO createTask(TaskRequest request) {
-        Task task = new Task();
-        task.setTaskId(UUIDUtil.uuidToLong()); // Uuid to Long autogenerate taskId
-        BeanUtils.copyProperties(request, task); // copy properties from request to task
-        Task saved = taskRepository.saveAndFlush(task);
-        return TaskMapper.toDTO(saved);
+    public Optional<TaskDTO> createTask(TaskRequest request) {
+        try {
+            Task task = new Task();
+            task.setTaskId(UUIDUtil.uuidToLong());
+            BeanUtils.copyProperties(request, task);
+            Task saved = taskRepository.saveAndFlush(task);
+            return Optional.of(TaskMapper.toDTO(saved));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
     }
 
+    @SuppressWarnings("unused")
     public boolean updateTaskStatus(Long taskId, Task.Status newStatus) {
         return taskRepository.findById(taskId).map(task -> {
             task.setStatus(newStatus);

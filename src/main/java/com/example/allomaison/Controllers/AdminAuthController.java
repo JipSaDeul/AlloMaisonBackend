@@ -1,7 +1,8 @@
 package com.example.allomaison.Controllers;
 
-import com.example.allomaison.DTOs.AdminLoginRequest;
-import com.example.allomaison.DTOs.AdminLoginResponse;
+import com.example.allomaison.DTOs.Requests.AdminLoginRequest;
+import com.example.allomaison.DTOs.Responses.AdminLoginResponse;
+import com.example.allomaison.DTOs.Responses.ErrorResponse;
 import com.example.allomaison.Security.AdminJwtService;
 import com.example.allomaison.Services.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -21,14 +22,18 @@ public class AdminAuthController {
         return adminService.login(request.getAdminName(), request.getPassword())
                 .map(admin -> {
                     String token = adminJwtService.generateToken(admin);
-                    AdminLoginResponse response = AdminLoginResponse.builder()
+                    return AdminLoginResponse.builder()
                             .token(token)
                             .adminId(admin.getAdminId())
                             .adminName(admin.getAdminName())
                             .build();
-                    return ResponseEntity.ok(response);
                 })
-                .orElse(ResponseEntity.status(401)
-                        .body(AdminLoginResponse.builder().token(null).build()));
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(401).body(
+                        ErrorResponse.builder()
+                                .errorCode(ErrorResponse.ErrorCode.AUTH_INVALID_CREDENTIALS)
+                                .message("Invalid admin name or password")
+                                .build()
+                ));
     }
 }

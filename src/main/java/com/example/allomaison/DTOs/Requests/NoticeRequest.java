@@ -1,4 +1,4 @@
-package com.example.allomaison.DTOs;
+package com.example.allomaison.DTOs.Requests;
 
 import com.example.allomaison.Entities.NoticeMessage;
 import lombok.Data;

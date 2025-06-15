@@ -2,7 +2,7 @@ package com.example.allomaison.Mapper;
 
 import com.example.allomaison.DTOs.NoticeMessageDTO;
 import com.example.allomaison.Entities.NoticeMessage;
-
+@SuppressWarnings("unused")
 public class NoticeMessageMapper {
     public static NoticeMessageDTO toDTO(NoticeMessage msg) {
         return new NoticeMessageDTO(

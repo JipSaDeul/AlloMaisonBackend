@@ -1,6 +1,9 @@
 package com.example.allomaison.Services;
 
 import com.example.allomaison.DTOs.*;
+import com.example.allomaison.DTOs.Projections.ReviewWithCustomerId;
+import com.example.allomaison.DTOs.Requests.NoticeRequest;
+import com.example.allomaison.DTOs.Responses.ProviderReviewSummary;
 import com.example.allomaison.Entities.*;
 import com.example.allomaison.Mapper.*;
 import com.example.allomaison.Repositories.*;
@@ -10,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +24,7 @@ public class ProviderService {
     private final ProviderLabelService labelService;
     private final CategoryRepository categoryRepository;
     private final CityRepository cityRepository;
+    private final UserRepository userRepository;
     private final ProviderApplicationRepository applicationRepository;
     private final ProviderApplicationCertificateRepository applicationCertificateRepository;
     private final ProviderApplicationService providerApplicationService;
@@ -59,7 +64,7 @@ public class ProviderService {
 
         // Labels to remove
         Set<String> toRemove = new HashSet<>(existingLabelNames);
-        toRemove.removeAll(newLabels);
+        newLabels.forEach(toRemove::remove);
 
         // Addition
         for (String labelName : toAdd) {
@@ -93,6 +98,7 @@ public class ProviderService {
         return providerInfoRepository.findById(providerId);
     }
 
+    @SuppressWarnings("unused")
     public Optional<ProviderDTO> getProviderDTOById(Long providerId) {
         if (!providerInfoRepository.existsById(providerId)) {
             return Optional.empty();
@@ -112,7 +118,8 @@ public class ProviderService {
         CityDTO cityDTO = CityMapper.toDTO(city);
 
         // Load label DTOs
-        List<ProviderLabelDTO> labelDTOs = infoLabelRepository.findByIdProviderId(providerId).stream()
+        List<ProviderLabelDTO> labelDTOs;
+        labelDTOs = infoLabelRepository.findByIdProviderId(providerId).stream()
                 .map(ProviderInfoLabel::getLabel)
                 .map(ProviderLabelMapper::toDTO)
                 .toList();
@@ -177,6 +184,7 @@ public class ProviderService {
 
         return true;
     }
+
     public boolean rejectApplication(ProviderApplicationDTO applicationDTO) {
         Long userId = applicationDTO.userId();
 
@@ -214,6 +222,7 @@ public class ProviderService {
                 .toList();
     }
 
+    @SuppressWarnings("unused")
     public Optional<Double> getProviderRating(Long providerId) {
         List<ReviewDTO> reviews = getProviderReviews(providerId);
         if (reviews == null || reviews.isEmpty()) return Optional.empty();
@@ -224,6 +233,101 @@ public class ProviderService {
                 .orElse(0.0);
 
         return Optional.of(averageRating);
+    }
+
+    public List<ProviderDTO> getAllProviders() {
+        List<ProviderInfo> providerEntities = providerInfoRepository.findAll();
+
+        return providerEntities.stream()
+                .map(info -> {
+                    Long providerId = info.getProviderId();
+
+                    Category category = categoryRepository.findById(info.getCatId()).orElse(null);
+                    if (category == null) return null;
+
+                    City city = cityRepository.findByZipcode(info.getCityZipcode()).orElse(null);
+                    if (city == null) return null;
+
+                    List<ProviderLabelDTO> labelDTOs = infoLabelRepository.findByIdProviderId(providerId).stream()
+                            .map(ProviderInfoLabel::getLabel)
+                            .map(ProviderLabelMapper::toDTO)
+                            .toList();
+
+                    List<ProviderCertificateDTO> certDTOs = applicationRepository.findByUserId(providerId).stream()
+                            .filter(app -> app.getStatus() == ProviderApplication.ApplicationStatus.APPROVED)
+                            .findFirst()
+                            .map(app -> applicationCertificateRepository.findByIdApplicationId(app.getApplicationId()).stream()
+                                    .map(ProviderApplicationCertificate::getCertificate)
+                                    .map(ProviderCertificateMapper::toDTO)
+                                    .toList()
+                            )
+                            .orElse(List.of());
+
+                    return ProviderInfoMapper.toFullDTO(
+                            info,
+                            CategoryMapper.toDTO(category),
+                            CityMapper.toDTO(city),
+                            labelDTOs,
+                            certDTOs
+                    );
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    public Optional<ProviderReviewSummary> getProviderReviewSummary(Long providerId) {
+        List<ReviewWithCustomerId> reviewProjections =
+                reviewRepository.findCompletedReviewsWithCustomerId(providerId);
+
+        if (reviewProjections.isEmpty()) return Optional.empty();
+
+        double avgRating = reviewProjections.stream()
+                .mapToInt(r -> Optional.ofNullable(r.getRanking()).orElse(0))
+                .average()
+                .orElse(0.0);
+
+        List<Long> customerIds = reviewProjections.stream()
+                .map(ReviewWithCustomerId::getCustomerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        // batch load userId -> userName map
+        Map<Long, String> idToName = StreamSupport.stream(
+                userRepository.findAllById(customerIds).spliterator(), false
+        ).collect(Collectors.toMap(User::getUserId, User::getUserName));
+
+        List<ProviderReviewSummary.CustomerReview> reviews = reviewProjections.stream()
+                .map(r -> ProviderReviewSummary.CustomerReview.builder()
+                        .author(idToName.getOrDefault(r.getCustomerId(), "Unknown"))
+                        .content(Optional.ofNullable(r.getReviewText()).orElse(""))
+                        .build())
+                .toList();
+
+        return Optional.of(ProviderReviewSummary.builder()
+                .rating(avgRating)
+                .customerReviews(reviews)
+                .build());
+    }
+
+    public List<String> getProviderLabels(Long providerId) {
+        return infoLabelRepository.findByIdProviderId(providerId).stream()
+                .map(ProviderInfoLabel::getLabel)
+                .map(ProviderLabel::getName)
+                .toList();
+    }
+
+    public Optional<String> getCategoryNameById(Integer catId) {
+        return categoryRepository.findById(catId).map(Category::getName);
+    }
+
+    public Optional<String> getCityNameByZip(Integer zipcode) {
+        return cityRepository.findByZipcode(zipcode).map(City::getPlace);
+    }
+
+
+    public Optional<String> getProviderName(Long providerId) {
+        return userRepository.findById(providerId).map(User::getUserName);
     }
 
 }

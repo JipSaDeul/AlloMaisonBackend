@@ -2,11 +2,13 @@ package com.example.allomaison.Services;
 
 import com.example.allomaison.DTOs.OrderDTO;
 import com.example.allomaison.Entities.Order;
+import com.example.allomaison.Entities.ProviderInfo;
 import com.example.allomaison.Entities.Review;
 import com.example.allomaison.Entities.Task;
 import com.example.allomaison.Mapper.OrderMapper;
 import com.example.allomaison.Mapper.TaskMapper;
 import com.example.allomaison.Repositories.OrderRepository;
+import com.example.allomaison.Repositories.ProviderInfoRepository;
 import com.example.allomaison.Repositories.ReviewRepository;
 import com.example.allomaison.Repositories.TaskRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +25,10 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final TaskRepository taskRepository;
     private final ReviewRepository reviewRepository;
+    private final ProviderInfoRepository providerInfoRepository;
 
     // Get order by task ID witch is also the order ID
+    @SuppressWarnings("unused")
     public Optional<OrderDTO> getOrderByTaskId(Long taskId) {
         return orderRepository.findById(taskId)
                 .flatMap(order -> taskRepository.findById(taskId)
@@ -64,6 +68,7 @@ public class OrderService {
     }
 
     // get orders by provider ID and status
+    @SuppressWarnings("unused")
     public List<OrderDTO> getOrdersByProviderAndStatus(Long providerId, Task.Status status) {
         List<Order> orders = orderRepository.findByProviderIdAndTaskStatus(providerId, status);
         final boolean needReview = status == Task.Status.COMPLETED;
@@ -78,5 +83,49 @@ public class OrderService {
                 .filter(Objects::nonNull)
                 .toList();
     }
+
+    public boolean changeOrderStatus(Long orderId, Long customerId, Task.Status newStatus) {
+        return orderRepository.findById(orderId).flatMap(order ->
+                taskRepository.findById(order.getOrderId()).map(task -> {
+                    if (!Objects.equals(task.getCustomerId(), customerId)) {
+                        return false;
+                    }
+                    task.setStatus(newStatus);
+                    taskRepository.save(task);
+                    return true;
+                })
+        ).orElse(false);
+    }
+
+    public boolean createOrderIfEligible(Long taskId, Long providerId) {
+        Optional<Task> taskOpt = taskRepository.findById(taskId);
+        if (taskOpt.isEmpty()) return false;
+
+        Task task = taskOpt.get();
+
+        if (orderRepository.existsById(taskId)) return false;
+
+        Optional<ProviderInfo> providerOpt = Optional.ofNullable(task.getStatus())
+                .filter(status -> status == Task.Status.PENDING)
+                .flatMap(s -> providerId != null ? Optional.of(providerId) : Optional.empty())
+                .flatMap(id -> Optional.ofNullable(task.getCatId())
+                        .flatMap(catId -> providerInfoRepository.findById(providerId)
+                                .filter(p -> p.getCatId().equals(catId)))
+                );
+
+        if (providerOpt.isEmpty()) return false;
+
+        task.setStatus(Task.Status.CONFIRMED);
+        taskRepository.save(task);
+
+        Order order = new Order();
+        order.setOrderId(task.getTaskId());
+        order.setTask(task);
+        order.setProvider(providerOpt.get());
+        orderRepository.save(order);
+
+        return true;
+    }
+
 
 }

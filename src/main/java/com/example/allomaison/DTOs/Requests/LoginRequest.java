@@ -1,5 +1,5 @@
 // LoginRequest.java
-package com.example.allomaison.DTOs;
+package com.example.allomaison.DTOs.Requests;
 
 import lombok.Data;
 

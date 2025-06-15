@@ -54,10 +54,12 @@ public class AdminService {
         });
     }
 
+    @SuppressWarnings("unused")
     public Optional<AdminDTO> getAdminById(Long adminId) {
         return adminRepository.findById(adminId).map(AdminMapper::toDTO);
     }
 
+    @SuppressWarnings("unused")
     public Optional<AdminDTO> getAdminByName(String adminName) {
         return adminRepository.findByAdminName(adminName).map(AdminMapper::toDTO);
     }
