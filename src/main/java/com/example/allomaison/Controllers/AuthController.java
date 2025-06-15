@@ -4,7 +4,6 @@ import com.example.allomaison.DTOs.*;
 import com.example.allomaison.Security.JwtService;
 import com.example.allomaison.Services.ProviderService;
 import com.example.allomaison.Services.UserService;
-import com.example.allomaison.Utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,11 +37,10 @@ public class AuthController {
                             .avatarUrl(user.getAvatarUrl())
                             .userName(user.getUserName())
                             .build();
-                    return ResponseEntity.ok(ApiResponse.success(response));
+                    return ResponseEntity.ok(response);
                 })
                 .orElse(ResponseEntity.status(401)
-                        .body(ApiResponse.fail("Invalid email or password",
-                                LoginResponse.builder().token(null).build())));
+                        .body(LoginResponse.builder().token(null).build()));
     }
 
 }

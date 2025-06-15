@@ -4,7 +4,6 @@ import com.example.allomaison.DTOs.AdminLoginRequest;
 import com.example.allomaison.DTOs.AdminLoginResponse;
 import com.example.allomaison.Security.AdminJwtService;
 import com.example.allomaison.Services.AdminService;
-import com.example.allomaison.Utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,10 +26,9 @@ public class AdminAuthController {
                             .adminId(admin.getAdminId())
                             .adminName(admin.getAdminName())
                             .build();
-                    return ResponseEntity.ok(ApiResponse.success(response));
+                    return ResponseEntity.ok(response);
                 })
                 .orElse(ResponseEntity.status(401)
-                        .body(ApiResponse.fail("Invalid admin name or password",
-                                AdminLoginResponse.builder().token(null).build())));
+                        .body(AdminLoginResponse.builder().token(null).build()));
     }
 }
