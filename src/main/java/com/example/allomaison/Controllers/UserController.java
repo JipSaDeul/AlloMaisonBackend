@@ -4,6 +4,7 @@ import com.example.allomaison.DTOs.*;
 import com.example.allomaison.DTOs.Requests.*;
 import com.example.allomaison.DTOs.Responses.ConversationResponse;
 import com.example.allomaison.DTOs.Responses.ErrorResponse;
+import com.example.allomaison.DTOs.TaskDTO;
 import com.example.allomaison.DTOs.Responses.SuccessResponse;
 import com.example.allomaison.Entities.ProviderInfo;
 import com.example.allomaison.Entities.Task;
@@ -302,6 +303,42 @@ public class UserController {
                             .build());
         }
 
+        if (newStatus == Task.Status.PENDING) {
+            return ResponseEntity.badRequest().body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_TYPE)
+                            .message("Cannot change status to PENDING")
+                            .build());
+        }
+
+        Optional<OrderDTO> orderOpt = orderService.getOrderByTaskId(orderId);
+        if (orderOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_NOT_FOUND)
+                            .message("Order not found")
+                            .build());
+        }
+
+        OrderDTO order = orderOpt.get();
+        TaskDTO task = order.task();
+        if (task == null || task.status() == null) {
+            return ResponseEntity.status(400).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_STATE)
+                            .message("Task or task status is missing in order")
+                            .build());
+        }
+
+        Task.Status currentStatus = task.status();
+        if (currentStatus == Task.Status.COMPLETED || currentStatus == Task.Status.CANCELLED) {
+            return ResponseEntity.status(400).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_STATE)
+                            .message("Cannot change status from COMPLETED or CANCELLED")
+                            .build());
+        }
+
         boolean success = orderService.changeOrderStatus(orderId, userId, newStatus);
         if (!success) {
             return ResponseEntity.status(403).body(
@@ -314,6 +351,71 @@ public class UserController {
         return ResponseEntity.ok(new SuccessResponse());
     }
 
+    @PostMapping("/provider/cancel")
+    public ResponseEntity<?> providerCancelOrder(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam("orderId") Long orderId
+    ) {
+        Optional<UserDTO> userOpt = extractUserFromToken(authHeader);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(401).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.AUTH_INVALID_CREDENTIALS)
+                            .message("Missing or invalid Authorization header")
+                            .build());
+        }
+
+        Long providerId = userOpt.get().getUserId();
+
+        Optional<OrderDTO> orderOpt = orderService.getOrderByTaskId(orderId);
+        if (orderOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_NOT_FOUND)
+                            .message("Order not found")
+                            .build());
+        }
+
+        OrderDTO order = orderOpt.get();
+
+        if (!order.providerId().equals(providerId)) {
+            return ResponseEntity.status(403).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.AUTH_FORBIDDEN)
+                            .message("Only the assigned provider can cancel the order")
+                            .build());
+        }
+
+        TaskDTO task = order.task();
+        if (task == null || task.status() == null) {
+            return ResponseEntity.status(400).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_STATE)
+                            .message("Task or task status is missing in order")
+                            .build());
+        }
+
+        Task.Status currentStatus = task.status();
+        if (currentStatus != Task.Status.CONFIRMED) {
+            return ResponseEntity.status(400).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_STATE)
+                            .message("Only orders in CONFIRMED state can be cancelled by provider")
+                            .build());
+        }
+
+        boolean success = orderService.changeOrderStatus(orderId, providerId, Task.Status.PENDING);
+        if (!success) {
+            return ResponseEntity.status(500).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INTERNAL_ERROR)
+                            .message("Failed to update order status")
+                            .build());
+        }
+
+        return ResponseEntity.ok(new SuccessResponse());
+    }
+    
     @PostMapping("/review")
     public ResponseEntity<?> reviewMyOrder(
             @RequestHeader("Authorization") String authHeader,
