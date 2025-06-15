@@ -1,7 +1,7 @@
 package com.example.allomaison.Services;
 
 import com.example.allomaison.DTOs.ProviderApplicationDTO;
-import com.example.allomaison.DTOs.ProviderApplicationRequest;
+import com.example.allomaison.DTOs.Requests.ProviderApplicationRequest;
 import com.example.allomaison.DTOs.ProviderCertificateDTO;
 import com.example.allomaison.Entities.*;
 import com.example.allomaison.Mapper.ProviderApplicationMapper;
@@ -11,9 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -101,6 +99,7 @@ public class ProviderApplicationService {
                 .map(app -> ProviderApplicationMapper.toDTO(app, getCertificatesForApplication(app.getApplicationId())));
     }
 
+    @SuppressWarnings("unused")
     public Optional<ProviderApplicationDTO> getActiveApplicationByUserId(Long userId) {
         return applicationRepository.findByUserId(userId).stream()
                 .filter(app -> app.getStatus() == ProviderApplication.ApplicationStatus.PENDING
@@ -116,6 +115,7 @@ public class ProviderApplicationService {
                 .toList();
     }
 
+    @SuppressWarnings("unused")
     public List<ProviderCertificateDTO> getCertificatesForProvider(Long providerId) {
         return applicationRepository.findByUserId(providerId).stream()
                 .filter(app -> app.getStatus() == ProviderApplication.ApplicationStatus.APPROVED)

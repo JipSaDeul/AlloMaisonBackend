@@ -23,6 +23,7 @@ public class UserMapper {
     }
 
     // DTO → Entity for full copy (e.g., registration)
+    @SuppressWarnings("unused")
     public static User toEntity(UserDTO dto, String passwordHash) {
         User user = new User();
         user.setUserId(dto.getUserId());

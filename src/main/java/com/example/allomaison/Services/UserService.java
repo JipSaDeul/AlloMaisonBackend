@@ -1,6 +1,7 @@
 package com.example.allomaison.Services;
 
-import com.example.allomaison.DTOs.UserRegisterRequest;
+import com.example.allomaison.DTOs.RegisterResult;
+import com.example.allomaison.DTOs.Requests.UserRegisterRequest;
 import com.example.allomaison.Entities.User;
 import com.example.allomaison.Mapper.UserMapper;
 import com.example.allomaison.Repositories.UserRepository;
@@ -24,13 +25,12 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public Optional<UserDTO> register(UserRegisterRequest request) {
+    public RegisterResult register(UserRegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent() ||
             userRepository.findByUserName(request.getUserName()).isPresent()) {
-            return Optional.empty();
+            return RegisterResult.failure(RegisterResult.ErrorReason.DUPLICATE_EMAIL_OR_USERNAME);
         }
 
-        // Analyze and validate request data
         User user = new User();
         Long userId = UUIDUtil.uuidToLong();
         user.setUserId(userId);
@@ -43,33 +43,38 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setLoginTime(Timestamp.from(Instant.now()));
 
-        // Handle avatar upload
-        if (request.getAvatar() == null || request.getAvatar().isEmpty()) {
-            user.setAvatarUrl(null); // No avatar uploaded
-        } else if (request.getAvatar().getSize() > 5 * 1024 * 1024) { // 5MB limit
-            return Optional.empty(); // Avatar too large
-        }
-        FileUploadResult avatarResult = FileStorageUtil.saveAvatarFile(request.getAvatar(), userId);
-        if (avatarResult.isSuccessful()) {
-            user.setAvatarUrl(avatarResult.getUrl());
-        } else {
-            // Log the error and return empty
-            System.err.println("Avatar upload failed: " + avatarResult.getError());
-            return Optional.empty(); // Avatar upload failed
+        if (request.getAvatar() != null && !request.getAvatar().isEmpty()) {
+            if (request.getAvatar().getSize() > 5 * 1024 * 1024) {
+                return RegisterResult.failure(RegisterResult.ErrorReason.AVATAR_TOO_LARGE);
+            }
+
+            FileUploadResult avatarResult = FileStorageUtil.saveAvatarFile(request.getAvatar(), userId);
+            if (avatarResult.isSuccessful()) {
+                user.setAvatarUrl(avatarResult.getUrl());
+            } else {
+                System.err.println("Avatar upload failed: " + avatarResult.getError());
+                return RegisterResult.failure(RegisterResult.ErrorReason.AVATAR_UPLOAD_FAILED);
+            }
         }
 
         User saved = userRepository.save(user);
         return userRepository.findById(saved.getUserId())
-                .map(UserMapper::toDTO);
+                .map(UserMapper::toDTO)
+                .map(RegisterResult::success)
+                .orElse(RegisterResult.failure(RegisterResult.ErrorReason.UNKNOWN));
     }
 
 
     public Optional<UserDTO> getUserById(Long userId) {
         return userRepository.findById(userId).map(UserMapper::toDTO);
     }
+
+    @SuppressWarnings("unused")
     public Optional<UserDTO> getUserByEmail(String email) {
         return userRepository.findByEmail(email).map(UserMapper::toDTO);
     }
+
+    @SuppressWarnings("unused")
     public Optional<UserDTO> getUserByUserName(String userName) {
         return userRepository.findByUserName(userName).map(UserMapper::toDTO);
     }
@@ -83,6 +88,7 @@ public class UserService {
         }).orElse(false);
     }
 
+    @SuppressWarnings("unused")
     public boolean updatePassword(Long userId, String oldPassword, String newPassword) {
         return userRepository.findById(userId).map(user -> {
             if (passwordEncoder.matches(oldPassword, user.getPasswordHash())) {

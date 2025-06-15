@@ -1,4 +1,4 @@
-package com.example.allomaison.DTOs;
+package com.example.allomaison.DTOs.Projections;
 
 import com.example.allomaison.Entities.NoticeMessage;
 

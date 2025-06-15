@@ -1,5 +1,5 @@
 // LoginResponse.java
-package com.example.allomaison.DTOs;
+package com.example.allomaison.DTOs.Responses;
 
 import lombok.Builder;
 import lombok.Data;

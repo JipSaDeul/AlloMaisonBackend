@@ -24,7 +24,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable) // Disable CSRF protection
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()     // Allow CORS preflight requests
-                        .requestMatchers("/api/**", "/admin/login").permitAll()     // Allow public login/register APIs
+                        .requestMatchers("/api/**", "/admin/**").permitAll()     // Allow public login/register APIs
                         .anyRequest().authenticated()                               // Require authentication for all other requests
                 )
                 .httpBasic(Customizer.withDefaults()); // Use basic auth (can replace with formLogin, JWT, etc.)

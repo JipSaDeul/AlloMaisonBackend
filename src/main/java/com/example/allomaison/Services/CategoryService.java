@@ -22,11 +22,13 @@ public class CategoryService {
                 .toList();
     }
 
+    @SuppressWarnings("unused")
     public Optional<CategoryDTO> getById(Integer id) {
         return categoryRepository.findById(id)
                 .map(CategoryMapper::toDTO);
     }
 
+    @SuppressWarnings("unused")
     public Optional<CategoryDTO> getByName(String name) {
         return categoryRepository.findByName(name)
                 .map(CategoryMapper::toDTO);

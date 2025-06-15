@@ -1,4 +1,4 @@
-package com.example.allomaison.DTOs;
+package com.example.allomaison.DTOs.Requests;
 
 public record MessageRequest(
         Long senderId,

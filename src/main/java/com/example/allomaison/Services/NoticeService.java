@@ -1,8 +1,8 @@
 package com.example.allomaison.Services;
 
 import com.example.allomaison.DTOs.NoticeMessageDTO;
-import com.example.allomaison.DTOs.NoticeProjection;
-import com.example.allomaison.DTOs.NoticeRequest;
+import com.example.allomaison.DTOs.Projections.NoticeProjection;
+import com.example.allomaison.DTOs.Requests.NoticeRequest;
 import com.example.allomaison.DTOs.UserDTO;
 import com.example.allomaison.Entities.NoticeMessage;
 import com.example.allomaison.Repositories.NoticeMessageRepository;

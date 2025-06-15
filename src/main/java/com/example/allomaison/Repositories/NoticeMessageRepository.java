@@ -1,6 +1,6 @@
 package com.example.allomaison.Repositories;
 
-import com.example.allomaison.DTOs.NoticeProjection;
+import com.example.allomaison.DTOs.Projections.NoticeProjection;
 import com.example.allomaison.Entities.NoticeMessage;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
