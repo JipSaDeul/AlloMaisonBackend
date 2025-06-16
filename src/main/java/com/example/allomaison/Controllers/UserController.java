@@ -541,8 +541,9 @@ public class UserController {
                             .message("Missing or invalid Authorization header")
                             .build());
         }
+        Boolean isProvider = providerService.isProvider(userOpt.get().getUserId());
 
-        UserInfoResponse response = UserMapper.toUserInfoResponse(userOpt.get());
+        UserInfoResponse response = UserMapper.toUserInfoResponse(userOpt.get(), isProvider);
         return ResponseEntity.ok(response);
     }
 
