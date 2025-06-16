@@ -23,7 +23,7 @@ public class Order {
     @JoinColumn(name = "providerId", nullable = false)
     private ProviderInfo provider;
 
-    @Column(name = "confirmedAt", nullable = false, updatable = false,
+    @Column(name = "confirmedAt", insertable = false, nullable = false, updatable = false,
             columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private Timestamp confirmedAt;
 }

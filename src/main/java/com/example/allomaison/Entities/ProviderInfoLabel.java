@@ -48,7 +48,7 @@ public class ProviderInfoLabel {
     public void setLabel(ProviderLabel label) {
         this.label = label;
     }
-    
+
     @Embeddable
     public static class Id implements Serializable {
         @Getter

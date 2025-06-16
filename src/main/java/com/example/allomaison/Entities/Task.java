@@ -2,6 +2,9 @@ package com.example.allomaison.Entities;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.GenerationTime;
+
 
 import java.sql.Timestamp;
 
@@ -54,7 +57,9 @@ public class Task {
 
     @Column(nullable = false, updatable = false,
             columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @Generated(GenerationTime.INSERT)
     private Timestamp createdAt;
+
 
     public enum Frequency {
         ONCE, DAILY, WEEKLY, MONTHLY

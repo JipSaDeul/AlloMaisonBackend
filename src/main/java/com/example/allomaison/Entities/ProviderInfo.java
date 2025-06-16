@@ -14,7 +14,7 @@ public class ProviderInfo {
     @Column(name = "providerId", updatable = false, nullable = false)
     private Long providerId; // Foreign key to Users.userId - immutable
 
-    @Column(name = "catId", nullable = false, unique = true, updatable = false)
+    @Column(name = "catId", nullable = false, updatable = false)
     private Integer catId; // Foreign key to `Categories.catId` - immutable
 
     @Column(columnDefinition = "TEXT")
@@ -32,7 +32,7 @@ public class ProviderInfo {
     @Column(name = "priceRange", length = 64)
     private String priceRange; // Price range as a string
 
-    @Column(name = "authorizedAt", nullable = false, updatable = false,
+    @Column(name = "authorizedAt", insertable = false, nullable = false, updatable = false,
             columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private Timestamp authorizedAt; // Set by database - immutable
 }

@@ -33,7 +33,7 @@ public class User {
 
     private Date birthDate;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @Column(name = "createdAt", insertable = false, updatable = false)
     private Timestamp createdAt;
 
     @Column(nullable = false,

@@ -104,7 +104,7 @@ CREATE TABLE `Provider_labels`
 CREATE TABLE `Provider_infos`
 (
     provider_id     BIGINT PRIMARY KEY,                  -- Foreign key to `Users` table
-    cat_id          INT UNIQUE NOT NULL,                 -- Foreign key to `Categories` table
+    cat_id          INT NOT NULL,                        -- Foreign key to `Categories` table
     description     TEXT,                                -- Application description
     service_offered TEXT,                                -- Detailed services as a JSON string
     city_zipcode    INT        NOT NULL,                 -- foreign key to Cities table, optional, can be null
