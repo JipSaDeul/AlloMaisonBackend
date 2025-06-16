@@ -1,7 +1,11 @@
 package com.example.allomaison.Mapper;
 
+import com.example.allomaison.DTOs.Responses.UserInfoResponse;
 import com.example.allomaison.Entities.User;
 import com.example.allomaison.DTOs.UserDTO;
+import org.springframework.beans.BeanUtils;
+
+import java.text.SimpleDateFormat;
 
 public class UserMapper {
 
@@ -44,5 +48,27 @@ public class UserMapper {
         user.setBirthDate(dto.getBirthDate());
         user.setLoginTime(dto.getLoginTime());
         user.setLastLoginTime(dto.getLastLoginTime());
+    }
+
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+
+    public static UserInfoResponse toUserInfoResponse(UserDTO dto) {
+        UserInfoResponse.UserInfoResponseBuilder builder = UserInfoResponse.builder();
+
+        // copy same-named and compatible fields
+        BeanUtils.copyProperties(dto, builder);
+
+        // manual mappings
+        builder
+                .userId(dto.getUserId())
+                .firstName(dto.getUserFirstName())
+                .lastName(dto.getUserLastName())
+                .gender(dto.getGender() == null ? null : (dto.getGender() ? UserInfoResponse.Gender.male : UserInfoResponse.Gender.female))
+                .birthday(dto.getBirthDate() == null ? null : DATE_FORMAT.format(dto.getBirthDate()))
+                .createdAt(dto.getCreatedAt() == null ? null : dto.getCreatedAt().toInstant().toString())
+                .avatarUrl(dto.getAvatarUrl())
+                .role(null); // role not present in UserDTO, set later if needed
+
+        return builder.build();
     }
 }

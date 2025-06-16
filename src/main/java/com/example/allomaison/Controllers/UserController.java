@@ -4,12 +4,14 @@ import com.example.allomaison.DTOs.*;
 import com.example.allomaison.DTOs.Requests.*;
 import com.example.allomaison.DTOs.Responses.ConversationResponse;
 import com.example.allomaison.DTOs.Responses.ErrorResponse;
+import com.example.allomaison.DTOs.Responses.UserInfoResponse;
 import com.example.allomaison.DTOs.TaskDTO;
 import com.example.allomaison.DTOs.Responses.SuccessResponse;
 import com.example.allomaison.Delayed.InMemoryDelayedQueueService;
 import com.example.allomaison.Entities.ProviderInfo;
 import com.example.allomaison.Entities.Task;
 import com.example.allomaison.Mapper.ProviderInfoMapper;
+import com.example.allomaison.Mapper.UserMapper;
 import com.example.allomaison.Repositories.CategoryRepository;
 import com.example.allomaison.Security.JwtService;
 import com.example.allomaison.Services.*;
@@ -540,7 +542,8 @@ public class UserController {
                             .build());
         }
 
-        return ResponseEntity.ok(userOpt.get());
+        UserInfoResponse response = UserMapper.toUserInfoResponse(userOpt.get());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping(value = "/userInfo/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

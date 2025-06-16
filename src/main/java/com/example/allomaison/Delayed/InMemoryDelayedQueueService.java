@@ -35,7 +35,6 @@ public class InMemoryDelayedQueueService implements DelayedQueueService {
             CompletionRequest request = iterator.next();
             if (request.getReadyAt().isBefore(now)) {
                 boolean success = taskService.updateTaskStatus(request.getTaskId(), com.example.allomaison.Entities.Task.Status.COMPLETED);
-                // 可选：日志、错误重试等
                 iterator.remove();
             }
         }
