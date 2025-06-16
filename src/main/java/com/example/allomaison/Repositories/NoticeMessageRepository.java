@@ -18,24 +18,24 @@ public interface NoticeMessageRepository extends JpaRepository<NoticeMessage, Lo
     List<NoticeMessage> findByTargets(NoticeMessage.Target target);
 
     @Query("""
-            SELECT n.noticeId AS noticeId,
-                        n.userId AS userId,
-                        n.title AS title,
-                        n.content AS content,
-                        n.type AS type,
-                        n.targets AS targets,
-                        n.sentTime AS sentTime,
-                        (n.sentTime > :lastLoginTime) AS recent
-                 FROM NoticeMessage n
-                 WHERE
-                     (n.targets = 'ALL')
-                     OR (n.targets = 'PROVIDERS' AND :isProvider = true)
-                     OR (n.targets = 'PERSONAL' AND n.userId = :userId)
-                 ORDER BY n.sentTime DESC
+                SELECT n.noticeId AS noticeId,
+                       n.userId AS userId,
+                       n.title AS title,
+                       n.content AS content,
+                       n.type AS type,
+                       n.targets AS targets,
+                       n.sentTime AS sentTime
+                FROM NoticeMessage n
+                WHERE
+                    (n.targets = 'ALL')
+                    OR (n.targets = 'PROVIDERS' AND :isProvider = true)
+                    OR (n.targets = 'PERSONAL' AND n.userId = :userId)
+                ORDER BY n.sentTime DESC
             """)
     List<NoticeProjection> findRelevantNotices(
             @Param("userId") Long userId,
             @Param("isProvider") boolean isProvider,
             @Param("lastLoginTime") Timestamp lastLoginTime
     );
+
 }

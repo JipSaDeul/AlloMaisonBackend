@@ -1,5 +1,7 @@
 package com.example.allomaison.DTOs.Requests;
+import lombok.Data;
 
+@Data
 public class UserRegisterJsonRequest {
     private String firstName;
     private String lastName;

@@ -12,6 +12,5 @@ public interface NoticeProjection {
     NoticeMessage.Type getType();
     NoticeMessage.Target getTargets();
     Timestamp getSentTime();
-    Boolean getRecent();
 }
 

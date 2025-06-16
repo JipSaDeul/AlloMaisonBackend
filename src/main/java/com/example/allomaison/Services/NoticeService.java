@@ -41,7 +41,7 @@ public class NoticeService {
                                 p.getTargets(),
                                 p.getSentTime()
                         ),
-                        p.getRecent()
+                        p.getSentTime().after(userDTO.getLastLoginTime())
                 ))
                 .toList();
     }
