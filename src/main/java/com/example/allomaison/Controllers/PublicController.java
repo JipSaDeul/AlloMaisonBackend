@@ -5,7 +5,9 @@ import com.example.allomaison.DTOs.ProviderDTO;
 import com.example.allomaison.DTOs.Responses.CategoryResponse;
 import com.example.allomaison.DTOs.Responses.CityResponse;
 import com.example.allomaison.DTOs.Responses.ErrorResponse;
+import com.example.allomaison.DTOs.Responses.ProviderResponse;
 import com.example.allomaison.Entities.Task;
+import com.example.allomaison.Mapper.ProviderMapper;
 import com.example.allomaison.Services.CategoryService;
 import com.example.allomaison.Services.CityService;
 import com.example.allomaison.Services.ProviderService;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -56,13 +60,23 @@ public class PublicController {
     }
 
     @GetMapping(value = "/providers", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ProviderDTO>> getAllProviders() {
+    public ResponseEntity<List<ProviderResponse>> getAllProviders() {
         List<ProviderDTO> providers = providerService.getAllProviders();
-        return ResponseEntity.ok(providers);
+
+        List<ProviderResponse> responses = providers.stream()
+                .map(dto -> userService.getUserById(dto.providerId())
+                        .map(userDTO -> ProviderMapper.toResponse(dto, userDTO))
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/review-summary")
-    public ResponseEntity<?> getReviewSummary(@RequestHeader("providerId") Long providerId) {
+    public ResponseEntity<?> getReviewSummary(@RequestParam("providerId") Long providerId)
+    {
+        System.out.println("Received request for review summary for providerId: " + providerId);
         if (!providerService.isProvider(providerId)) {
             return ResponseEntity.status(403).body(
                     ErrorResponse.builder()

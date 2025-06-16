@@ -1,17 +1,18 @@
 package com.example.allomaison.Controllers;
 
 import com.example.allomaison.DTOs.AdminDTO;
+import com.example.allomaison.DTOs.CategoryDTO;
+import com.example.allomaison.DTOs.CityDTO;
 import com.example.allomaison.DTOs.ProviderApplicationDTO;
 import com.example.allomaison.DTOs.Requests.AdminRegisterRequest;
 import com.example.allomaison.DTOs.Responses.ErrorResponse;
+import com.example.allomaison.DTOs.Responses.ProviderApplicationResponse;
 import com.example.allomaison.DTOs.Responses.SuccessResponse;
 import com.example.allomaison.Entities.ProviderApplication;
+import com.example.allomaison.Mapper.ProviderApplicationMapper;
 import com.example.allomaison.Security.AdminJwtService;
-import com.example.allomaison.Services.AdminService;
-import com.example.allomaison.Services.NoticeService;
+import com.example.allomaison.Services.*;
 import com.example.allomaison.DTOs.Requests.NoticeRequest;
-import com.example.allomaison.Services.ProviderApplicationService;
-import com.example.allomaison.Services.ProviderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/admin")
@@ -31,6 +33,8 @@ public class AdminController {
     private final ProviderService providerService;
     private final ProviderApplicationService providerApplicationService;
     private final AdminService adminService;
+    private final CategoryService categoryService;
+    private final CityService cityService;
 
     private Optional<AdminDTO> extractAdminFromToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -60,6 +64,7 @@ public class AdminController {
     ) {
         Optional<AdminDTO> adminOpt = extractAdminFromToken(authHeader);
         if (adminOpt.isEmpty()) {
+            System.out.println(adminOpt);
             return ResponseEntity.status(401).body(ErrorResponse.builder()
                     .errorCode(ErrorResponse.ErrorCode.AUTH_INVALID_CREDENTIALS)
                     .message("Missing or invalid admin token")
@@ -153,7 +158,18 @@ public class AdminController {
         }
 
         List<ProviderApplicationDTO> result = providerApplicationService.getApplicationsByStatus(status);
-        return ResponseEntity.ok(result);
+        List<ProviderApplicationResponse> responses = result.stream()
+                .map(dto -> {
+                    String categoryName = categoryService.getById(dto.catId())
+                            .map(CategoryDTO::name)
+                            .orElse("Unknown Category");
+                    String cityName = cityService.getCityByZipcode(dto.cityZipcode())
+                            .map(CityDTO::place)
+                            .orElse("Unknown City");
+                    return ProviderApplicationMapper.toResponse(dto, cityName, categoryName);
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
     }
     @PostMapping("/applications/{applicationId}/review")
     public ResponseEntity<?> reviewApplication(

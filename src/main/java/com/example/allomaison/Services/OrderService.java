@@ -11,8 +11,10 @@ import com.example.allomaison.Repositories.OrderRepository;
 import com.example.allomaison.Repositories.ProviderInfoRepository;
 import com.example.allomaison.Repositories.ReviewRepository;
 import com.example.allomaison.Repositories.TaskRepository;
+import jdk.swing.interop.SwingInterOpUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
@@ -84,46 +86,35 @@ public class OrderService {
                 .toList();
     }
 
-    public boolean changeOrderStatus(Long orderId, Long customerId, Task.Status newStatus) {
-        return orderRepository.findById(orderId).flatMap(order ->
-                taskRepository.findById(order.getOrderId()).map(task -> {
-                    if (!Objects.equals(task.getCustomerId(), customerId)) {
-                        return false;
-                    }
-                    task.setStatus(newStatus);
-                    taskRepository.save(task);
-                    return true;
-                })
-        ).orElse(false);
-    }
 
+    @Transactional
     public boolean createOrderIfEligible(Long taskId, Long providerId) {
-        Optional<Task> taskOpt = taskRepository.findById(taskId);
-        if (taskOpt.isEmpty()) return false;
+        System.out.println("createOrderIfEligible called with taskId: " + taskId + ", providerId: " + providerId);
 
-        Task task = taskOpt.get();
+        Task task = taskRepository.findById(taskId).orElse(null);
+        if (task == null || task.getStatus() != Task.Status.PENDING) {
+            System.out.println("Task not found or not pending");
+            return false;
+        }
 
-        if (orderRepository.existsById(taskId)) return false;
+        if (orderRepository.existsByOrderId(taskId)) {
+            System.out.println("Order already exists.");
+            return false;
+        }
 
-        Optional<ProviderInfo> providerOpt = Optional.ofNullable(task.getStatus())
-                .filter(status -> status == Task.Status.PENDING)
-                .flatMap(s -> providerId != null ? Optional.of(providerId) : Optional.empty())
-                .flatMap(id -> Optional.ofNullable(task.getCatId())
-                        .flatMap(catId -> providerInfoRepository.findById(providerId)
-                                .filter(p -> p.getCatId().equals(catId)))
-                );
-
-        if (providerOpt.isEmpty()) return false;
+        ProviderInfo provider = providerInfoRepository.findById(providerId).orElse(null);
+        if (provider == null || !provider.getCatId().equals(task.getCatId())) {
+            System.out.println("Invalid provider or category mismatch.");
+            return false;
+        }
 
         task.setStatus(Task.Status.CONFIRMED);
-        taskRepository.save(task);
 
         Order order = new Order();
-        order.setOrderId(task.getTaskId());
         order.setTask(task);
-        order.setProvider(providerOpt.get());
-        orderRepository.save(order);
+        order.setProvider(provider);
 
+        orderRepository.save(order);
         return true;
     }
 

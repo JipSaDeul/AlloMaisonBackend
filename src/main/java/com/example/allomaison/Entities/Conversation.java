@@ -14,9 +14,9 @@ public class Conversation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long chatId;
 
-    @Column(nullable = false)
+    @Column(name = "user1_id", nullable = false)
     private Long user1Id;
 
-    @Column(nullable = false)
+    @Column(name = "user2_id", nullable = false)
     private Long user2Id;
 }

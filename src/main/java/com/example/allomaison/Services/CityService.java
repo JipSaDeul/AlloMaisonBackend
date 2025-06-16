@@ -44,4 +44,20 @@ public class CityService {
                 .map(CityMapper::toDTO)
                 .collect(Collectors.toList());
     }
+    public Optional<CityDTO> getCityFromFormattedString(String cityString) {
+        if (cityString == null || !cityString.contains(",")) {
+            return Optional.empty();
+        }
+
+        String[] parts = cityString.split(",", 2);
+        if (parts.length < 2) {
+            return Optional.empty();
+        }
+
+        String place = parts[0].trim();
+        String province = parts[1].trim();
+
+        return getCityByPlaceAndProvince(place, province);
+    }
+
 }

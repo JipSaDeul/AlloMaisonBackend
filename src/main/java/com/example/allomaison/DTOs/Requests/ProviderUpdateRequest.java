@@ -6,9 +6,7 @@ import java.util.List;
 
 @Data
 public class ProviderUpdateRequest {
-    private String category;
-    private String city; // zipcode
-    private String providerName;
+    private String city; // "{place}, {province}"
     private String description;
     private List<String> servicesOffered;
     private String serviceArea;

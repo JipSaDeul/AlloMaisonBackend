@@ -45,13 +45,23 @@ public class ProviderInfoMapper {
     }
 
     public static void updateEntity(ProviderInfo entity, ProviderInfoDTO dto) {
-        // only update mutable fields
-        entity.setDescription(dto.getDescription());
-        entity.setServiceOffered(toJsonArray(dto.getServiceOffered()));
-        entity.setCityZipcode(dto.getCityZipcode());
-        entity.setServiceArea(dto.getServiceArea());
-        entity.setPriceRange(dto.getPriceRange());
+        if (dto.getDescription() != null) {
+            entity.setDescription(dto.getDescription());
+        }
+        if (dto.getServiceOffered() != null) {
+            entity.setServiceOffered(toJsonArray(dto.getServiceOffered()));
+        }
+        if (dto.getCityZipcode() != null) {
+            entity.setCityZipcode(dto.getCityZipcode());
+        }
+        if (dto.getServiceArea() != null) {
+            entity.setServiceArea(dto.getServiceArea());
+        }
+        if (dto.getPriceRange() != null) {
+            entity.setPriceRange(dto.getPriceRange());
+        }
     }
+
 
     // === JSON utility ===
 

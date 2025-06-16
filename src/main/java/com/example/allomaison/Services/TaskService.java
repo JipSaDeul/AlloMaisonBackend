@@ -84,7 +84,19 @@ public class TaskService {
         try {
             Task task = new Task();
             task.setTaskId(UUIDUtil.uuidToLong());
-            BeanUtils.copyProperties(request, task);
+
+            task.setCustomerId(request.getCustomerId());
+            task.setTitle(request.getTitle());
+            task.setCatId(request.getCatId());
+            task.setFrequency(request.getFrequency());
+            task.setCityZipcode(request.getCityZipcode());
+            task.setStartTime(request.getStartTime());
+            task.setEndTime(request.getEndTime());
+            task.setAddress(request.getAddress());
+            task.setBudget(request.getBudget());
+            task.setCustomerContact(request.getCustomerContact());
+            task.setDescription(request.getDescription());
+
             Task saved = taskRepository.saveAndFlush(task);
             return Optional.of(TaskMapper.toDTO(saved));
         } catch (Exception e) {

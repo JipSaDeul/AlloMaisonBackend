@@ -10,7 +10,8 @@ import java.util.List;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    boolean existsByOrderId(Long orderId);
+    @Query("SELECT COUNT(o) > 0 FROM Order o WHERE o.orderId = :orderId")
+    boolean existsByOrderId(@Param("orderId") Long orderId);
 
     @Query("""
                 SELECT o FROM Order o

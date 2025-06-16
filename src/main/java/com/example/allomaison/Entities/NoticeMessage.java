@@ -30,7 +30,7 @@ public class NoticeMessage {
     @Column(nullable = false)
     private Target targets = Target.ALL;
 
-    @Column(nullable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @Column(nullable = false, insertable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private Timestamp sentTime;
 
     public enum Type {

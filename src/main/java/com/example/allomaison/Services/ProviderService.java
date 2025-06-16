@@ -243,10 +243,14 @@ public class ProviderService {
                     Long providerId = info.getProviderId();
 
                     Category category = categoryRepository.findById(info.getCatId()).orElse(null);
-                    if (category == null) return null;
+                    if (category == null) {
+                        return null;
+                    }
 
                     City city = cityRepository.findByZipcode(info.getCityZipcode()).orElse(null);
-                    if (city == null) return null;
+                    if (city == null) {
+                        return null;
+                    }
 
                     List<ProviderLabelDTO> labelDTOs = infoLabelRepository.findByIdProviderId(providerId).stream()
                             .map(ProviderInfoLabel::getLabel)

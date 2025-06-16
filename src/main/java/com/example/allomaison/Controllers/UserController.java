@@ -2,17 +2,17 @@ package com.example.allomaison.Controllers;
 
 import com.example.allomaison.DTOs.*;
 import com.example.allomaison.DTOs.Requests.*;
-import com.example.allomaison.DTOs.Responses.ConversationResponse;
-import com.example.allomaison.DTOs.Responses.ErrorResponse;
-import com.example.allomaison.DTOs.Responses.UserInfoResponse;
+import com.example.allomaison.DTOs.Responses.*;
 import com.example.allomaison.DTOs.TaskDTO;
-import com.example.allomaison.DTOs.Responses.SuccessResponse;
 import com.example.allomaison.Delayed.InMemoryDelayedQueueService;
 import com.example.allomaison.Entities.ProviderInfo;
 import com.example.allomaison.Entities.Task;
+import com.example.allomaison.Mapper.OrderMapper;
 import com.example.allomaison.Mapper.ProviderInfoMapper;
+import com.example.allomaison.Mapper.TaskMapper;
 import com.example.allomaison.Mapper.UserMapper;
 import com.example.allomaison.Repositories.CategoryRepository;
+import com.example.allomaison.Repositories.ProviderInfoRepository;
 import com.example.allomaison.Security.JwtService;
 import com.example.allomaison.Services.*;
 import com.example.allomaison.Utils.FileStorageUtil;
@@ -25,6 +25,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +49,8 @@ public class UserController {
     private final ConversationService conversationService;
     private final NoticeService noticeService;
     private final InMemoryDelayedQueueService delayedQueueService;
+    private final CityService cityService;
+    private final ProviderInfoRepository providerInfoRepository;
 
     private Optional<UserDTO> extractUserFromToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -103,7 +108,14 @@ public class UserController {
             Timestamp oneMonthLater = new Timestamp(now.getTime() + 30L * 24 * 60 * 60 * 1000);
 
             List<TaskDTO> tasks = taskService.getNearbyTasks(zipcode, catId, now, oneMonthLater);
-            response[0] = ResponseEntity.ok(tasks);
+            List<TaskResponse> responses = tasks.stream()
+                    .map(task -> TaskMapper.toResponse(
+                            task,
+                            providerService.getCategoryNameById(task.catId()).orElse("Unknown"),
+                            providerService.getCityNameByZip(task.cityZipcode()).orElse("Unknown")
+                    )).toList();
+
+            response[0] = ResponseEntity.ok(responses);
         });
 
         return error != null ? error : response[0];
@@ -215,9 +227,9 @@ public class UserController {
         request.setDescription((String) rawRequest.get("description"));
 
         try {
-            request.setStartTime(Timestamp.valueOf((String) rawRequest.get("startTime")));
-            request.setEndTime(Timestamp.valueOf((String) rawRequest.get("endTime")));
-            request.setBudget(Integer.parseInt((String) rawRequest.get("budget")));
+            request.setStartTime(parseToTimestamp((String) rawRequest.get("startTime")));
+            request.setEndTime(parseToTimestamp((String) rawRequest.get("endTime")));
+            request.setBudget((Integer) rawRequest.get("budget"));
         } catch (Exception e) {
             return ResponseEntity.status(400).body(
                     ErrorResponse.builder()
@@ -235,6 +247,23 @@ public class UserController {
                                 .build()));
 
     }
+    private Timestamp parseToTimestamp(String input) {
+        try {
+            DateTimeFormatter formatter;
+            if (input.length() == 16) {
+                formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+            } else if (input.length() == 19) {
+                formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+            } else {
+                throw new IllegalArgumentException("Unsupported datetime format: " + input);
+            }
+
+            LocalDateTime localDateTime = LocalDateTime.parse(input, formatter);
+            return Timestamp.valueOf(localDateTime);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("Invalid datetime format: " + input, e);
+        }
+    }
 
     @GetMapping("/tasks/my")
     public ResponseEntity<?> getMyTasks(@RequestHeader("Authorization") String authHeader) {
@@ -249,7 +278,14 @@ public class UserController {
 
         Long userId = userOpt.get().getUserId();
         List<TaskDTO> tasks = taskService.getTasksByCustomerId(userId);
-        return ResponseEntity.ok(tasks);
+        List<TaskResponse> responses = tasks.stream()
+                .map(task -> TaskMapper.toResponse(
+                        task,
+                        providerService.getCategoryNameById(task.catId()).orElse("Unknown"),
+                        providerService.getCityNameByZip(task.cityZipcode()).orElse("Unknown")
+                )).toList();
+        return ResponseEntity.ok(responses);
+
     }
 
     @GetMapping("/orders/my")
@@ -265,7 +301,20 @@ public class UserController {
 
         Long customerId = userOpt.get().getUserId();
         List<OrderDTO> orders = orderService.getOrdersByCustomerId(customerId);
-        return ResponseEntity.ok(orders);
+        List<OrderResponse> responses = orders.stream()
+                .map(order -> OrderMapper.toResponse(
+                        order,
+                        userService.getUserById(order.task().customerId())
+                                .map(UserDTO::getUserName)
+                                .orElse("Unknown"),
+                        providerService.getCategoryNameById(order.task().catId())
+                                .orElse("Unknown"),
+                        providerService.getCityNameByZip(order.task().cityZipcode())
+                                .orElse("Unknown")
+                )).toList();
+
+        return ResponseEntity.ok(responses);
+
     }
 
     @GetMapping("/orders/provider")
@@ -275,7 +324,19 @@ public class UserController {
         ResponseEntity<?> error = validateProviderAndExtractUser(authHeader, user -> {
             Long providerId = user.getUserId();
             List<OrderDTO> orders = orderService.getOrdersByProviderId(providerId);
-            response[0] = ResponseEntity.ok(orders);
+            List<OrderResponse> responses = orders.stream()
+                    .map(order -> OrderMapper.toResponse(
+                            order,
+                            userService.getUserById(order.task().customerId())
+                                    .map(UserDTO::getUserName)
+                                    .orElse("Unknown"),
+                            providerService.getCategoryNameById(order.task().catId())
+                                    .orElse("Unknown"),
+                            providerService.getCityNameByZip(order.task().cityZipcode())
+                                    .orElse("Unknown")
+                    )).toList();
+
+            response[0] = ResponseEntity.ok(responses);
         });
 
         return error != null ? error : response[0];
@@ -909,8 +970,8 @@ public class UserController {
             @RequestHeader("Authorization") String authHeader,
             @RequestBody ProviderUpdateRequest request
     ) {
-        Optional<UserDTO> userOpt;
-        userOpt = extractUserFromToken(authHeader);
+
+        Optional<UserDTO> userOpt = extractUserFromToken(authHeader);
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body(
                     ErrorResponse.builder()
@@ -919,60 +980,33 @@ public class UserController {
                             .build());
         }
 
+        Optional<ProviderInfo> providerOpt = providerService.getProviderInfo(userOpt.get().getUserId());
+        if (providerOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(
+                    ErrorResponse.builder()
+                            .errorCode(ErrorResponse.ErrorCode.INPUT_NOT_FOUND)
+                            .message("Provider info not found")
+                            .build());
+        }
+
+        ProviderInfo provider = providerOpt.get();
         Long providerId = userOpt.get().getUserId();
-        if (!providerService.isProvider(providerId)) {
-            return ResponseEntity.status(403).body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.AUTH_FORBIDDEN)
-                            .message("You are not a provider")
-                            .build());
-        }
 
-        // Validate category
-        var catOpt = categoryRepository.findByName(request.getCategory());
-        if (catOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_TYPE)
-                            .message("Invalid category name")
-                            .build());
-        }
-
-        // Validate city (zipcode)
-        int zipcode;
-        try {
-            zipcode = Integer.parseInt(request.getCity());
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_TYPE)
-                            .message("Invalid city/zipcode")
-                            .build());
-        }
-
-        if (providerService.getCityNameByZip(zipcode).isEmpty()) {
-            return ResponseEntity.badRequest().body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_TYPE)
-                            .message("Zipcode does not exist")
-                            .build());
-        }
-
-        // Update provider name
-        String newName = request.getProviderName();
-        if (newName != null && !newName.trim().isEmpty()) {
-            boolean updated = userService.updateUserName(providerId, newName.trim());
-            if (!updated) {
-                return ResponseEntity.status(409).body(
+        Integer zipcode = null;
+        if (request.getCity() != null) {
+            Optional<CityDTO> cityOpt = cityService.getCityFromFormattedString(request.getCity());
+            if (cityOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(
                         ErrorResponse.builder()
-                                .errorCode(ErrorResponse.ErrorCode.INPUT_DUPLICATE)
-                                .message("Provider name already exists")
+                                .errorCode(ErrorResponse.ErrorCode.INPUT_INVALID_TYPE)
+                                .message("Invalid city '{place}, {province}' format")
                                 .build());
             }
+            zipcode = cityOpt.get().zipcode();
         }
 
         ProviderInfoDTO dto = new ProviderInfoDTO();
-        dto.setProviderId(providerId);
+        dto.setProviderId(providerId); // optional if you don't need to update ID
         dto.setDescription(request.getDescription());
         dto.setServiceOffered(request.getServicesOffered());
         dto.setCityZipcode(zipcode);
@@ -980,17 +1014,13 @@ public class UserController {
         dto.setPriceRange(request.getPriceRange());
         dto.setLabels(request.getProviderLabels());
 
-        boolean success = providerService.updateProviderInfo(dto);
-        if (!success) {
-            return ResponseEntity.status(500).body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.SERVER_ERROR)
-                            .message("Failed to update provider info")
-                            .build());
-        }
+        ProviderInfoMapper.updateEntity(provider, dto);
 
+        providerInfoRepository.save(provider);
         return ResponseEntity.ok(new SuccessResponse());
+
     }
+
 
     @GetMapping("/notices")
     public ResponseEntity<?> getMyNotices(@RequestHeader("Authorization") String authHeader) {

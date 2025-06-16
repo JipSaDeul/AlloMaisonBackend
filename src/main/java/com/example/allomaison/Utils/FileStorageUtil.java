@@ -4,16 +4,19 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Set;
 import java.util.UUID;
 
 public class FileStorageUtil {
 
-    private static final String AVATAR_STORAGE_PATH = "src/main/resources/static/avatars/";
-    private static final String AVATAR_URL_PREFIX = "/static/avatars/";
+    private static final Path AVATAR_STORAGE_PATH = Paths.get(System.getProperty("user.dir"), "uploads", "avatars");
+    private static final String AVATAR_URL_PREFIX = "/avatars/";
 
-    private static final String FILE_STORAGE_PATH = "src/main/resources/static/files/";
-    private static final String FILE_URL_PREFIX = "/static/files/";
+    private static final Path FILE_STORAGE_PATH = Paths.get(System.getProperty("user.dir"), "uploads", "files");
+    private static final String FILE_URL_PREFIX = "/files/";
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -34,7 +37,7 @@ public class FileStorageUtil {
         return saveFile(file, FILE_STORAGE_PATH, FILE_URL_PREFIX, prefix);
     }
 
-    private static FileUploadResult saveFile(MultipartFile file, String path, String urlPrefix, String prefix) {
+    private static FileUploadResult saveFile(MultipartFile file, Path storagePath, String urlPrefix, String prefix) {
         if (file == null || file.isEmpty()) {
             return new FileUploadResult(false, null, "File is empty.");
         }
@@ -54,14 +57,11 @@ public class FileStorageUtil {
         }
 
         String filename = prefix + "_" + UUID.randomUUID() + extension;
-        File dest = new File(path + filename);
-        File dir = dest.getParentFile();
-        if (!dir.exists() && !dir.mkdirs()) {
-            return new FileUploadResult(false, null, "Failed to create directory.");
-        }
+        Path filePath = storagePath.resolve(filename); // ✅ 正确拼接路径
 
         try {
-            file.transferTo(dest);
+            Files.createDirectories(storagePath); // 自动创建目录
+            file.transferTo(filePath.toFile());   // 保存文件
         } catch (IOException e) {
             return new FileUploadResult(false, null, "File write error: " + e.getMessage());
         }
