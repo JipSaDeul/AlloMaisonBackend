@@ -81,7 +81,7 @@ CREATE TABLE `Provider_applications`
   AUTO_INCREMENT = 1;
 
 -- Provider_certificates associated with Provider_applications
-CREATE TABLE `Provide_application_certificates`
+CREATE TABLE `Provider_application_certificates`
 (
     application_id BIGINT NOT NULL, -- Foreign key to `Provider_applications` table
     certificate_id BIGINT NOT NULL, -- Foreign key to `Provider_certificates` table

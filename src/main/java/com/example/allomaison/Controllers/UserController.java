@@ -563,14 +563,14 @@ public class UserController {
         }
 
         UserDTO user = userOpt.get();
-
-        if (!user.getUserId().equals(userId)) {
-            return ResponseEntity.status(403).body(
-                    ErrorResponse.builder()
-                            .errorCode(ErrorResponse.ErrorCode.AUTH_FORBIDDEN)
-                            .message("You can only upload your own avatar")
-                            .build());
-        }
+//
+//        if (!user.getUserId().equals(userId)) {
+//            return ResponseEntity.status(403).body(
+//                    ErrorResponse.builder()
+//                            .errorCode(ErrorResponse.ErrorCode.AUTH_FORBIDDEN)
+//                            .message("You can only upload your own avatar")
+//                            .build());
+//        }
 
         if (avatar == null || avatar.isEmpty()) {
             return ResponseEntity.badRequest().body(
